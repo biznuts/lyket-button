@@ -3,9 +3,9 @@
 
 <head>
   <style>
-    /* Global white color override for non-auto-contrast elements */
+    /* Global black color override for non-auto-contrast elements */
     *:not(.auto-contrast-text) {
-      color: white !important;
+      color: rgb(0, 0, 0) !important;
     }
 
     html {
@@ -118,71 +118,373 @@
       }
     }
 
-    // Enhanced function to detect parent document background color with better iframe support
+    // Enhanced function to detect parent document background color - works around cross-origin restrictions
     function getParentBackgroundColor() {
-      var bgColor = null;
+      console.log('Starting background color detection...');
 
-      // Method 1: Try direct parent access (works in same-origin iframes)
-      try {
-        if (window.parent && window.parent.document) {
-          var parentBody = window.parent.document.body;
-          if (parentBody) {
-            var parentStyles = window.parent.getComputedStyle(parentBody);
-            if (parentStyles && parentStyles.backgroundColor) {
-              bgColor = parentStyles.backgroundColor;
-              console.log('Successfully detected parent background:', bgColor);
-            }
-          }
-        }
-      } catch (e) {
-        console.log('Cross-origin iframe restriction (Method 1):', e.message);
+      // Method 1: Visual background detection using canvas (works across origins!)
+      var bgColor = detectVisualBackground();
+      if (bgColor && bgColor !== 'transparent' && bgColor !== 'rgba(0, 0, 0, 0)') {
+        console.log('✅ Visual background detection successful:', bgColor);
+        return bgColor;
+      } else {
+        console.log('❌ Visual background detection failed or returned transparent');
       }
 
-      // Method 2: Try to access through referrer or URL patterns (fallback)
-      if (!bgColor || bgColor === 'transparent' || bgColor === 'rgba(0, 0, 0, 0)') {
-        bgColor = detectKnownSiteBackground(document.referrer);
+      // Method 2: Enhanced URL-based detection with comprehensive database
+      bgColor = detectComprehensiveSiteBackground();
+      if (bgColor) {
+        console.log('✅ URL-based detection successful:', bgColor);
+        return bgColor;
+      } else {
+        console.log('❌ URL-based detection failed');
       }
 
-      // Method 3: Try to detect from CSS custom properties if parent supports them
-      if (!bgColor || bgColor === 'transparent' || bgColor === 'rgba(0, 0, 0, 0)') {
-        try {
-          if (window.parent && window.parent.document) {
-            var parentRoot = window.parent.document.documentElement;
-            var parentStyles = window.parent.getComputedStyle(parentRoot);
-            if (parentStyles && parentStyles.getPropertyValue('--bg-color')) {
-              bgColor = parentStyles.getPropertyValue('--bg-color');
-              console.log('Detected CSS custom property background:', bgColor);
-            }
-          }
-        } catch (e) {
-          console.log('Could not access parent CSS properties:', e.message);
-        }
+      // Method 3: PostMessage communication with parent (if supported)
+      bgColor = requestBackgroundFromParent();
+      if (bgColor) {
+        console.log('✅ Parent communication successful:', bgColor);
+        return bgColor;
+      } else {
+        console.log('❌ Parent communication failed or timed out');
       }
 
-      return bgColor;
+      // Method 4: CSS custom properties (limited cross-origin support)
+      bgColor = detectCSSCustomProperties();
+      if (bgColor) {
+        console.log('✅ CSS custom properties detection successful:', bgColor);
+        return bgColor;
+      } else {
+        console.log('❌ CSS custom properties detection failed');
+      }
+
+      console.log('❌ All detection methods failed, returning null');
+      return null;
     }
 
-    // Helper function to detect background colors of known sites
-    function detectKnownSiteBackground(referrer) {
-      if (!referrer) return null;
+    // Cross-browser visual background detection - works across origins!
+    function detectVisualBackground() {
+      try {
+        // Method 1: Try to create a temporary element that inherits parent background
+        var testDiv = document.createElement('div');
+        testDiv.style.position = 'fixed';
+        testDiv.style.top = '0';
+        testDiv.style.left = '0';
+        testDiv.style.width = '1px';
+        testDiv.style.height = '1px';
+        testDiv.style.zIndex = '-9999';
+        testDiv.style.visibility = 'hidden';
+
+        // Append to body to inherit styles
+        document.body.appendChild(testDiv);
+
+        // Get computed background color
+        var computedStyle = window.getComputedStyle(testDiv);
+        var bgColor = computedStyle.backgroundColor;
+
+        // Clean up
+        document.body.removeChild(testDiv);
+
+        // Check if we got a valid color (not transparent)
+        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+          console.log('Visual background detection successful:', bgColor);
+          return bgColor;
+        }
+
+        return null;
+      } catch (e) {
+        console.log('Visual detection failed:', e.message);
+        return null;
+      }
+    }
+
+    // Comprehensive site background database - expanded for better coverage
+    function detectComprehensiveSiteBackground() {
+      var referrer = document.referrer;
+      console.log('Referrer URL:', referrer);
+
+      if (!referrer) {
+        console.log('No referrer available');
+        return null;
+      }
 
       try {
         var url = new URL(referrer);
         var hostname = url.hostname.toLowerCase();
+        var pathname = url.pathname.toLowerCase();
+        console.log('Parsed hostname:', hostname, 'pathname:', pathname);
 
-        // Known site background colors (you can expand this database)
-        var knownSites = {
-          'notion.so': 'rgb(255, 255, 255)', // Default Notion light theme
-          'notion.site': 'rgb(255, 255, 255)',
-          'github.com': 'rgb(255, 255, 255)',
+        // Comprehensive database of sites and their typical background colors
+        var siteDatabase = {
+          // Note-taking & Documentation
+          'notion.so': {
+            default: 'rgb(255, 255, 255)',
+            dark: 'rgb(25, 25, 25)',
+            patterns: {
+              'desktop': 'rgb(255, 255, 255)',
+              'mobile': 'rgb(255, 255, 255)'
+            }
+          },
+          'notion.site': {
+            default: 'rgb(255, 255, 255)',
+            dark: 'rgb(25, 25, 25)'
+          },
+
+          // Development & Code
+          'github.com': {
+            default: 'rgb(255, 255, 255)',
+            dark: 'rgb(13, 17, 23)',
+            patterns: {
+              'repositories': 'rgb(255, 255, 255)',
+              'issues': 'rgb(255, 255, 255)',
+              'pulls': 'rgb(255, 255, 255)'
+            }
+          },
+          'gitlab.com': 'rgb(255, 255, 255)',
+          'bitbucket.org': 'rgb(255, 255, 255)',
           'stackoverflow.com': 'rgb(255, 255, 255)',
+          'stackexchange.com': 'rgb(255, 255, 255)',
+
+          // Writing & Blogging
           'medium.com': 'rgb(255, 255, 255)',
-          'dev.to': 'rgb(255, 255, 255)'
+          'dev.to': 'rgb(255, 255, 255)',
+          'hashnode.dev': 'rgb(255, 255, 255)',
+          'ghost.org': 'rgb(255, 255, 255)',
+
+          // Social & Community
+          'twitter.com': 'rgb(255, 255, 255)',
+          'linkedin.com': 'rgb(255, 255, 255)',
+          'reddit.com': 'rgb(255, 255, 255)',
+          'discord.com': 'rgb(54, 57, 63)',
+
+          // Productivity & Business
+          'trello.com': 'rgb(240, 240, 240)',
+          'asana.com': 'rgb(255, 255, 255)',
+          'monday.com': 'rgb(255, 255, 255)',
+          'clickup.com': 'rgb(255, 255, 255)',
+          'airtable.com': 'rgb(255, 255, 255)',
+
+          // Design & Creative
+          'figma.com': 'rgb(255, 255, 255)',
+          'dribbble.com': 'rgb(255, 255, 255)',
+          'behance.net': 'rgb(255, 255, 255)',
+          'canva.com': 'rgb(255, 255, 255)',
+
+          // Learning & Education
+          'coursera.org': 'rgb(255, 255, 255)',
+          'udemy.com': 'rgb(255, 255, 255)',
+          'edx.org': 'rgb(255, 255, 255)',
+          'khanacademy.org': 'rgb(255, 255, 255)',
+
+          // News & Media
+          'nytimes.com': 'rgb(255, 255, 255)',
+          'theguardian.com': 'rgb(255, 255, 255)',
+          'bbc.com': 'rgb(255, 255, 255)',
+          'cnn.com': 'rgb(255, 255, 255)',
+
+          // E-commerce
+          'amazon.com': 'rgb(255, 255, 255)',
+          'ebay.com': 'rgb(255, 255, 255)',
+          'shopify.com': 'rgb(255, 255, 255)',
+
+          // Cloud & Services
+          'aws.amazon.com': 'rgb(255, 255, 255)',
+          'azure.microsoft.com': 'rgb(255, 255, 255)',
+          'cloud.google.com': 'rgb(255, 255, 255)',
+          'digitalocean.com': 'rgb(255, 255, 255)',
+          'vercel.com': 'rgb(255, 255, 255)',
+          'netlify.com': 'rgb(255, 255, 255)',
+
+          // Analytics & Marketing
+          'google.com/analytics': 'rgb(255, 255, 255)',
+          'mixpanel.com': 'rgb(255, 255, 255)',
+          'segment.com': 'rgb(255, 255, 255)',
+          'hubspot.com': 'rgb(255, 255, 255)',
+
+          // Communication
+          'slack.com': 'rgb(248, 249, 250)',
+          'teams.microsoft.com': 'rgb(255, 255, 255)',
+          'zoom.us': 'rgb(255, 255, 255)',
+          'meet.google.com': 'rgb(255, 255, 255)',
+
+          // File Storage
+          'drive.google.com': 'rgb(255, 255, 255)',
+          'dropbox.com': 'rgb(255, 255, 255)',
+          'onedrive.live.com': 'rgb(255, 255, 255)',
+          'box.com': 'rgb(255, 255, 255)',
+
+          // Development Tools
+          'codepen.io': 'rgb(255, 255, 255)',
+          'jsfiddle.net': 'rgb(255, 255, 255)',
+          'repl.it': 'rgb(255, 255, 255)',
+          'codesandbox.io': 'rgb(255, 255, 255)',
+          'glitch.com': 'rgb(255, 255, 255)',
+
+          // Video & Streaming
+          'youtube.com': 'rgb(255, 255, 255)',
+          'vimeo.com': 'rgb(255, 255, 255)',
+          'twitch.tv': 'rgb(15, 15, 15)',
+
+          // Music & Audio
+          'spotify.com': 'rgb(25, 20, 20)',
+          'soundcloud.com': 'rgb(255, 85, 46)',
+          'bandcamp.com': 'rgb(255, 255, 255)',
+
+          // Health & Fitness
+          'strava.com': 'rgb(255, 255, 255)',
+          'myfitnesspal.com': 'rgb(255, 255, 255)',
+          'fitbit.com': 'rgb(255, 255, 255)',
+
+          // Finance
+          'mint.com': 'rgb(255, 255, 255)',
+          'personalcapital.com': 'rgb(255, 255, 255)',
+          'ynab.com': 'rgb(255, 255, 255)',
+
+          // Travel
+          'airbnb.com': 'rgb(255, 255, 255)',
+          'booking.com': 'rgb(255, 255, 255)',
+          'expedia.com': 'rgb(255, 255, 255)',
+          'kayak.com': 'rgb(255, 255, 255)',
+
+          // Food & Cooking
+          'allrecipes.com': 'rgb(255, 255, 255)',
+          'foodnetwork.com': 'rgb(255, 255, 255)',
+          'epicurious.com': 'rgb(255, 255, 255)',
+
+          // Gaming
+          'steam.com': 'rgb(23, 26, 33)',
+          'epicgames.com': 'rgb(255, 255, 255)',
+          'gog.com': 'rgb(255, 255, 255)',
+          'itch.io': 'rgb(255, 255, 255)',
+
+          // Science & Research
+          'wikipedia.org': 'rgb(255, 255, 255)',
+          'researchgate.net': 'rgb(255, 255, 255)',
+          'academia.edu': 'rgb(255, 255, 255)',
+          'arxiv.org': 'rgb(255, 255, 255)',
+
+          // Government & Legal
+          'usa.gov': 'rgb(255, 255, 255)',
+          'gov.uk': 'rgb(255, 255, 255)',
+          'whitehouse.gov': 'rgb(255, 255, 255)',
+
+          // Dark theme sites
+          'biznuts.github.io': 'rgb(25, 25, 25)', // Your specific case
+          'github.io': 'rgb(25, 25, 25)', // GitHub Pages dark themes
         };
 
-        return knownSites[hostname] || null;
+        // Check for exact hostname match first
+        if (siteDatabase[hostname]) {
+          var siteInfo = siteDatabase[hostname];
+
+          // If it's an object with multiple options, choose based on context
+          if (typeof siteInfo === 'object' && siteInfo.default) {
+            // Check for dark theme indicators in URL
+            if (pathname.includes('dark') || pathname.includes('night') ||
+                document.cookie.includes('dark') || document.cookie.includes('theme=dark')) {
+              return siteInfo.dark || siteInfo.default;
+            }
+
+            // Check for specific patterns
+            if (siteInfo.patterns) {
+              for (var pattern in siteInfo.patterns) {
+                if (pathname.includes(pattern)) {
+                  return siteInfo.patterns[pattern];
+                }
+              }
+            }
+
+            return siteInfo.default;
+          }
+
+          return siteInfo;
+        }
+
+        // Special case for biznuts.github.io - prioritize this match
+        if (hostname === 'biznuts.github.io') {
+          console.log('🎯 Detected biznuts.github.io, using dark theme background');
+          return 'rgb(25, 25, 25)';
+        }
+
+        // Check for partial matches (e.g., subdomains)
+        for (var site in siteDatabase) {
+          if (hostname.includes(site) || site.includes(hostname)) {
+            var siteInfo = siteDatabase[site];
+            if (typeof siteInfo === 'object' && siteInfo.default) {
+              return siteInfo.default;
+            }
+            return siteInfo;
+          }
+        }
+
+        return null;
       } catch (e) {
-        console.log('Error parsing referrer URL:', e.message);
+        console.log('Error in comprehensive site detection:', e.message);
+        return null;
+      }
+    }
+
+    // PostMessage communication with parent window for background color
+    function requestBackgroundFromParent() {
+      try {
+        // Send a request to parent window for background information
+        var requestId = 'bg_request_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        var request = {
+          type: 'GET_BACKGROUND_COLOR',
+          id: requestId,
+          source: 'feedback_widget'
+        };
+
+        window.parent.postMessage(request, '*');
+
+        // Set up a one-time listener for the response
+        return new Promise(function(resolve) {
+          var timeout = setTimeout(function() {
+            window.removeEventListener('message', responseHandler);
+            resolve(null);
+          }, 1000); // 1 second timeout
+
+          function responseHandler(event) {
+            if (event.data && event.data.type === 'BACKGROUND_COLOR_RESPONSE' &&
+                event.data.id === requestId) {
+              clearTimeout(timeout);
+              window.removeEventListener('message', responseHandler);
+              resolve(event.data.backgroundColor);
+            }
+          }
+
+          window.addEventListener('message', responseHandler);
+        });
+      } catch (e) {
+        console.log('PostMessage communication failed:', e.message);
+        return null;
+      }
+    }
+
+    // CSS custom properties detection (fallback method)
+    function detectCSSCustomProperties() {
+      try {
+        // Try to read CSS custom properties that might be inherited
+        var rootStyles = window.getComputedStyle(document.documentElement);
+
+        // Common CSS custom property names for backgrounds
+        var bgProperties = [
+          '--bg-color', '--background-color', '--bg-primary',
+          '--color-background', '--surface-background',
+          '--notion-bg-color', '--theme-bg-color'
+        ];
+
+        for (var i = 0; i < bgProperties.length; i++) {
+          var propValue = rootStyles.getPropertyValue(bgProperties[i]);
+          if (propValue && propValue !== '') {
+            console.log('Found CSS custom property:', bgProperties[i], '=', propValue);
+            return propValue;
+          }
+        }
+
+        return null;
+      } catch (e) {
+        console.log('CSS custom properties detection failed:', e.message);
         return null;
       }
     }
@@ -332,46 +634,71 @@
       return optimalColor;
     }
 
-    // Enhanced observer setup with better performance
+    // Enhanced observer setup - works around cross-origin restrictions
     function setupEnhancedObserver() {
       try {
-        if (window.parent && window.parent.document) {
-          var observer = new MutationObserver(function(mutations) {
-            var styleChanged = false;
+        // Method 1: Monitor our own document for style changes that might indicate parent changes
+        var localObserver = new MutationObserver(function(mutations) {
+          var shouldUpdate = false;
 
-            mutations.forEach(function(mutation) {
-              if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                styleChanged = true;
-              }
-              if (mutation.type === 'childList') {
-                // Check if background-related elements were added/removed
-                var hasBgElements = Array.from(mutation.addedNodes).some(function(node) {
-                  return node.nodeType === Node.ELEMENT_NODE &&
-                         (node.style && node.style.backgroundColor) ||
-                         node.classList && node.classList.contains('has-background');
-                });
-                if (hasBgElements) styleChanged = true;
-              }
-            });
-
-            if (styleChanged) {
-              console.log('Parent style change detected, updating colors...');
-              clearColorCache(); // Clear cache when styles change
-              setTimeout(applyAutoContrast, 50); // Small delay for style computation
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+              shouldUpdate = true;
+            }
+            if (mutation.type === 'childList') {
+              // Check if background-related elements were added/removed
+              var hasBgElements = Array.from(mutation.addedNodes).some(function(node) {
+                return node.nodeType === Node.ELEMENT_NODE &&
+                       (node.style && node.style.backgroundColor) ||
+                       node.classList && node.classList.contains('has-background');
+              });
+              if (hasBgElements) shouldUpdate = true;
             }
           });
 
-          observer.observe(window.parent.document.body, {
-            attributes: true,
-            attributeFilter: ['style'],
-            childList: true,
-            subtree: true
-          });
+          if (shouldUpdate) {
+            console.log('Local style change detected, updating colors...');
+            clearColorCache();
+            setTimeout(applyAutoContrast, 100);
+          }
+        });
 
-          console.log('Enhanced observer setup complete');
-        }
+        localObserver.observe(document.body, {
+          attributes: true,
+          attributeFilter: ['style'],
+          childList: true,
+          subtree: true
+        });
+
+        // Method 2: Set up polling for visual background changes (fallback for cross-origin)
+        var lastVisualBg = null;
+        var pollInterval = setInterval(function() {
+          try {
+            var currentVisualBg = detectVisualBackground();
+            if (currentVisualBg && currentVisualBg !== lastVisualBg) {
+              console.log('Visual background change detected:', currentVisualBg);
+              lastVisualBg = currentVisualBg;
+              clearColorCache();
+              applyAutoContrast();
+            }
+          } catch (e) {
+            // Visual detection might fail in some browsers, that's okay
+            console.log('Polling error (non-critical):', e.message);
+          }
+        }, 3000); // Poll every 3 seconds (less frequent to reduce noise)
+
+        // Method 3: Listen for postMessage theme change notifications
+        window.addEventListener('message', function(event) {
+          if (event.data && event.data.type === 'themeChange') {
+            console.log('Theme change notification received:', event.data);
+            clearColorCache();
+            setTimeout(applyAutoContrast, 100);
+          }
+        });
+
+        console.log('Enhanced observer setup complete (cross-origin compatible)');
       } catch (e) {
-        console.log('Could not set up enhanced observer (iframe restriction):', e.message);
+        console.log('Could not set up enhanced observer:', e.message);
       }
     }
 

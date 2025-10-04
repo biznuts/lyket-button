@@ -131,13 +131,13 @@
         console.log('❌ Visual background detection failed or returned transparent');
       }
 
-      // Method 2: Enhanced URL-based detection with comprehensive database
-      bgColor = detectComprehensiveSiteBackground();
+      // Method 2: Notion-focused URL detection
+      bgColor = detectNotionBackground();
       if (bgColor) {
-        console.log('✅ URL-based detection successful:', bgColor);
+        console.log('✅ Notion detection successful:', bgColor);
         return bgColor;
       } else {
-        console.log('❌ URL-based detection failed');
+        console.log('❌ Notion detection failed');
       }
 
       // Method 3: PostMessage communication with parent (if supported)
@@ -167,8 +167,8 @@
         console.log('❌ CSS custom properties detection failed');
       }
 
-      console.log('❌ All detection methods failed, returning null');
-      return null;
+      console.log('❌ All detection methods failed, returning transparent');
+      return 'transparent';
     }
 
     // Ultra-sensitive visual background detection with Notion theme support
@@ -278,229 +278,38 @@
       }
     }
 
-    // Comprehensive site background database - expanded for better coverage
-    function detectComprehensiveSiteBackground() {
+    // Simplified Notion-focused background detection
+    function detectNotionBackground() {
       var referrer = document.referrer;
       console.log('Referrer URL:', referrer);
 
       if (!referrer) {
         console.log('No referrer available');
-        return null;
+        return 'transparent'; // Default to transparent
       }
 
       try {
         var url = new URL(referrer);
         var hostname = url.hostname.toLowerCase();
-        var pathname = url.pathname.toLowerCase();
-        console.log('Parsed hostname:', hostname, 'pathname:', pathname);
 
-        // Comprehensive database of sites and their typical background colors
-        var siteDatabase = {
-          // Note-taking & Documentation
-          'notion.so': {
-            default: 'rgb(255, 255, 255)',
-            dark: 'rgb(25, 25, 25)',
-            patterns: {
-              'desktop': 'rgb(255, 255, 255)',
-              'mobile': 'rgb(255, 255, 255)'
-            }
-          },
-          'notion.site': {
-            default: 'rgb(255, 255, 255)',
-            dark: 'rgb(25, 25, 25)'
-          },
-
-          // Development & Code
-          'github.com': {
-            default: 'rgb(255, 255, 255)',
-            dark: 'rgb(13, 17, 23)',
-            patterns: {
-              'repositories': 'rgb(255, 255, 255)',
-              'issues': 'rgb(255, 255, 255)',
-              'pulls': 'rgb(255, 255, 255)'
-            }
-          },
-          'gitlab.com': 'rgb(255, 255, 255)',
-          'bitbucket.org': 'rgb(255, 255, 255)',
-          'stackoverflow.com': 'rgb(255, 255, 255)',
-          'stackexchange.com': 'rgb(255, 255, 255)',
-
-          // Writing & Blogging
-          'medium.com': 'rgb(255, 255, 255)',
-          'dev.to': 'rgb(255, 255, 255)',
-          'hashnode.dev': 'rgb(255, 255, 255)',
-          'ghost.org': 'rgb(255, 255, 255)',
-
-          // Social & Community
-          'twitter.com': 'rgb(255, 255, 255)',
-          'linkedin.com': 'rgb(255, 255, 255)',
-          'reddit.com': 'rgb(255, 255, 255)',
-          'discord.com': 'rgb(54, 57, 63)',
-
-          // Productivity & Business
-          'trello.com': 'rgb(240, 240, 240)',
-          'asana.com': 'rgb(255, 255, 255)',
-          'monday.com': 'rgb(255, 255, 255)',
-          'clickup.com': 'rgb(255, 255, 255)',
-          'airtable.com': 'rgb(255, 255, 255)',
-
-          // Design & Creative
-          'figma.com': 'rgb(255, 255, 255)',
-          'dribbble.com': 'rgb(255, 255, 255)',
-          'behance.net': 'rgb(255, 255, 255)',
-          'canva.com': 'rgb(255, 255, 255)',
-
-          // Learning & Education
-          'coursera.org': 'rgb(255, 255, 255)',
-          'udemy.com': 'rgb(255, 255, 255)',
-          'edx.org': 'rgb(255, 255, 255)',
-          'khanacademy.org': 'rgb(255, 255, 255)',
-
-          // News & Media
-          'nytimes.com': 'rgb(255, 255, 255)',
-          'theguardian.com': 'rgb(255, 255, 255)',
-          'bbc.com': 'rgb(255, 255, 255)',
-          'cnn.com': 'rgb(255, 255, 255)',
-
-          // E-commerce
-          'amazon.com': 'rgb(255, 255, 255)',
-          'ebay.com': 'rgb(255, 255, 255)',
-          'shopify.com': 'rgb(255, 255, 255)',
-
-          // Cloud & Services
-          'aws.amazon.com': 'rgb(255, 255, 255)',
-          'azure.microsoft.com': 'rgb(255, 255, 255)',
-          'cloud.google.com': 'rgb(255, 255, 255)',
-          'digitalocean.com': 'rgb(255, 255, 255)',
-          'vercel.com': 'rgb(255, 255, 255)',
-          'netlify.com': 'rgb(255, 255, 255)',
-
-          // Analytics & Marketing
-          'google.com/analytics': 'rgb(255, 255, 255)',
-          'mixpanel.com': 'rgb(255, 255, 255)',
-          'segment.com': 'rgb(255, 255, 255)',
-          'hubspot.com': 'rgb(255, 255, 255)',
-
-          // Communication
-          'slack.com': 'rgb(248, 249, 250)',
-          'teams.microsoft.com': 'rgb(255, 255, 255)',
-          'zoom.us': 'rgb(255, 255, 255)',
-          'meet.google.com': 'rgb(255, 255, 255)',
-
-          // File Storage
-          'drive.google.com': 'rgb(255, 255, 255)',
-          'dropbox.com': 'rgb(255, 255, 255)',
-          'onedrive.live.com': 'rgb(255, 255, 255)',
-          'box.com': 'rgb(255, 255, 255)',
-
-          // Development Tools
-          'codepen.io': 'rgb(255, 255, 255)',
-          'jsfiddle.net': 'rgb(255, 255, 255)',
-          'repl.it': 'rgb(255, 255, 255)',
-          'codesandbox.io': 'rgb(255, 255, 255)',
-          'glitch.com': 'rgb(255, 255, 255)',
-
-          // Video & Streaming
-          'youtube.com': 'rgb(255, 255, 255)',
-          'vimeo.com': 'rgb(255, 255, 255)',
-          'twitch.tv': 'rgb(15, 15, 15)',
-
-          // Music & Audio
-          'spotify.com': 'rgb(25, 20, 20)',
-          'soundcloud.com': 'rgb(255, 85, 46)',
-          'bandcamp.com': 'rgb(255, 255, 255)',
-
-          // Health & Fitness
-          'strava.com': 'rgb(255, 255, 255)',
-          'myfitnesspal.com': 'rgb(255, 255, 255)',
-          'fitbit.com': 'rgb(255, 255, 255)',
-
-          // Finance
-          'mint.com': 'rgb(255, 255, 255)',
-          'personalcapital.com': 'rgb(255, 255, 255)',
-          'ynab.com': 'rgb(255, 255, 255)',
-
-          // Travel
-          'airbnb.com': 'rgb(255, 255, 255)',
-          'booking.com': 'rgb(255, 255, 255)',
-          'expedia.com': 'rgb(255, 255, 255)',
-          'kayak.com': 'rgb(255, 255, 255)',
-
-          // Food & Cooking
-          'allrecipes.com': 'rgb(255, 255, 255)',
-          'foodnetwork.com': 'rgb(255, 255, 255)',
-          'epicurious.com': 'rgb(255, 255, 255)',
-
-          // Gaming
-          'steam.com': 'rgb(23, 26, 33)',
-          'epicgames.com': 'rgb(255, 255, 255)',
-          'gog.com': 'rgb(255, 255, 255)',
-          'itch.io': 'rgb(255, 255, 255)',
-
-          // Science & Research
-          'wikipedia.org': 'rgb(255, 255, 255)',
-          'researchgate.net': 'rgb(255, 255, 255)',
-          'academia.edu': 'rgb(255, 255, 255)',
-          'arxiv.org': 'rgb(255, 255, 255)',
-
-          // Government & Legal
-          'usa.gov': 'rgb(255, 255, 255)',
-          'gov.uk': 'rgb(255, 255, 255)',
-          'whitehouse.gov': 'rgb(255, 255, 255)',
-
-          // Light theme sites
-          'biznuts.github.io': 'rgb(255, 255, 255)', // Your specific case - light theme default
-          'github.io': 'rgb(25, 25, 25)', // GitHub Pages dark themes
-        };
-
-        // Check for exact hostname match first
-        if (siteDatabase[hostname]) {
-          var siteInfo = siteDatabase[hostname];
-
-          // If it's an object with multiple options, choose based on context
-          if (typeof siteInfo === 'object' && siteInfo.default) {
-            // Check for dark theme indicators in URL
-            if (pathname.includes('dark') || pathname.includes('night') ||
-                document.cookie.includes('dark') || document.cookie.includes('theme=dark')) {
-              return siteInfo.dark || siteInfo.default;
-            }
-
-            // Check for specific patterns
-            if (siteInfo.patterns) {
-              for (var pattern in siteInfo.patterns) {
-                if (pathname.includes(pattern)) {
-                  return siteInfo.patterns[pattern];
-                }
-              }
-            }
-
-            return siteInfo.default;
-          }
-
-          return siteInfo;
+        // Only handle Notion domains
+        if (hostname === 'notion.so' || hostname === 'www.notion.so') {
+          console.log('🎯 Notion detected, using transparent background');
+          return 'transparent'; // Let Notion's background show through
         }
 
-        // Special case for biznuts.github.io - prioritize this match
-        if (hostname === 'biznuts.github.io') {
-          console.log('🎯 Detected biznuts.github.io, using light theme background');
-          return 'rgb(255, 255, 255)';
+        if (hostname === 'notion.site') {
+          console.log('🎯 Notion.site detected, using transparent background');
+          return 'transparent';
         }
 
-        // Check for partial matches (e.g., subdomains)
-        for (var site in siteDatabase) {
-          if (hostname.includes(site) || site.includes(hostname)) {
-            var siteInfo = siteDatabase[site];
-            if (typeof siteInfo === 'object' && siteInfo.default) {
-              return siteInfo.default;
-            }
-            return siteInfo;
-          }
-        }
+        // For any other site, default to transparent
+        console.log('Non-Notion site detected, using transparent background');
+        return 'transparent';
 
-        return null;
       } catch (e) {
-        console.log('Error in comprehensive site detection:', e.message);
-        return null;
+        console.log('Error in Notion detection:', e.message);
+        return 'transparent'; // Default to transparent on error
       }
     }
 
@@ -1054,12 +863,11 @@
       clearColorCache();
 
       var themeColors = {
+        'transparent': 'transparent',
         'light': 'rgb(255, 255, 255)',
         'dark': 'rgb(25, 25, 25)',
         'notion-light': 'rgb(255, 255, 255)',
         'notion-dark': 'rgb(25, 25, 25)',
-        'biznuts-light': 'rgb(255, 255, 255)', // Default for biznuts.github.io
-        'biznuts-dark': 'rgb(25, 25, 25)',
         'auto': null // Auto-detect
       };
 

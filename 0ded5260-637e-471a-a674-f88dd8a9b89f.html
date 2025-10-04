@@ -3,18 +3,13 @@
 
 <head>
   <style>
-    /* Global black color override for non-auto-contrast elements */
-    *:not(.auto-contrast-text) {
-      color: rgb(0, 0, 0) !important;
-    }
-
+    /* Global settings */
     html {
       height: 100%;
       font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', Helvetica, 'Apple Color Emoji', Arial, sans-serif, 'Segoe UI Emoji', 'Segoe UI Symbol';
     }
 
     body {
-      /* background-color: rgb(25, 25, 25); */
       background-color: transparent;
       margin: 0;
       padding: 0px;
@@ -26,23 +21,27 @@
       padding: 0px 12px 0px 0px;
     }
 
-    /* Ensure auto-contrast text color overrides take precedence */
+    /* Auto-contrast text system - highest specificity */
     .auto-contrast-text,
-    .auto-contrast-text * {
-      color: inherit !important;
-      font-weight: 500;
+    .auto-contrast-text *,
+    .feedback-widget.auto-contrast-text,
+    .feedback-widget.auto-contrast-text *,
+    .notion-enhanced,
+    .notion-enhanced * {
+      color: var(--auto-contrast-color, inherit) !important;
+      font-weight: 500 !important;
+    }
+
+    /* Fallback for elements without CSS custom property */
+    .auto-contrast-text:not([style*="--auto-contrast-color"]),
+    .notion-enhanced:not([style*="--auto-contrast-color"]) {
+      color: white !important;
     }
 
     /* Notion theme support - try to inherit theme colors if available */
     .notion-theme-aware {
       background-color: var(--notion-bg-color, var(--notion-theme-bg, inherit));
       color: var(--notion-text-color, var(--notion-theme-text, inherit));
-    }
-
-    /* Enhanced auto-contrast with Notion theme fallbacks */
-    .auto-contrast-text.notion-enhanced {
-      /* Use Notion theme colors if available, fallback to auto-calculation */
-      color: var(--notion-auto-text-color, inherit);
     }
   </style>
 </head>
@@ -561,8 +560,12 @@
           console.log('Using fallback color for element:', element.className, 'Color:', finalColor);
         }
 
-        // Apply the determined color with high specificity
+        // Apply the determined color using CSS custom properties (highest specificity)
         if (finalColor) {
+          // Use CSS custom property for maximum specificity
+          element.style.setProperty('--auto-contrast-color', finalColor);
+
+          // Also set as direct style as fallback
           element.style.setProperty('color', finalColor, 'important');
         }
       });
@@ -636,6 +639,7 @@
             var testElement = document.querySelector('.auto-contrast-text');
             if (testElement) {
               var optimalColor = calculateOptimalTextColor(event.data.backgroundColor);
+              testElement.style.setProperty('--auto-contrast-color', optimalColor);
               testElement.style.setProperty('color', optimalColor, 'important');
             }
           }
@@ -655,6 +659,7 @@
           var notionElements = document.querySelectorAll('.notion-enhanced');
           notionElements.forEach(function(element) {
             var optimalColor = calculateOptimalTextColor(notionBgColor);
+            element.style.setProperty('--auto-contrast-color', optimalColor);
             element.style.setProperty('color', optimalColor, 'important');
           });
         }
@@ -877,6 +882,7 @@
         var elements = document.querySelectorAll('.auto-contrast-text');
         elements.forEach(function(element) {
           var optimalColor = calculateOptimalTextColor(bgColor);
+          element.style.setProperty('--auto-contrast-color', optimalColor);
           element.style.setProperty('color', optimalColor, 'important');
           console.log('✅ Applied color:', optimalColor, 'for background:', bgColor);
         });

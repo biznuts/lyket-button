@@ -149,7 +149,16 @@
         console.log('❌ Parent communication failed or timed out');
       }
 
-      // Method 4: CSS custom properties (limited cross-origin support)
+      // Method 4: Notion theme class detection
+      bgColor = detectNotionThemeClasses();
+      if (bgColor) {
+        console.log('✅ Notion theme class detection successful:', bgColor);
+        return bgColor;
+      } else {
+        console.log('❌ Notion theme class detection failed');
+      }
+
+      // Method 5: CSS custom properties (limited cross-origin support)
       bgColor = detectCSSCustomProperties();
       if (bgColor) {
         console.log('✅ CSS custom properties detection successful:', bgColor);
@@ -162,38 +171,77 @@
       return null;
     }
 
-    // Cross-browser visual background detection - works across origins!
+    // Enhanced visual background detection with Notion theme support
     function detectVisualBackground() {
       try {
-        // Method 1: Try to create a temporary element that inherits parent background
+        // Method 1: Create multiple test elements to detect different aspects
         var testDiv = document.createElement('div');
-        testDiv.style.position = 'fixed';
-        testDiv.style.top = '0';
-        testDiv.style.left = '0';
-        testDiv.style.width = '1px';
-        testDiv.style.height = '1px';
-        testDiv.style.zIndex = '-9999';
-        testDiv.style.visibility = 'hidden';
+        testDiv.style.cssText = `
+          position: fixed;
+          top: 0; left: 0;
+          width: 10px; height: 10px;
+          z-index: -9999;
+          visibility: hidden;
+          pointer-events: none;
+        `;
 
-        // Append to body to inherit styles
         document.body.appendChild(testDiv);
 
-        // Get computed background color
+        // Get multiple computed properties
         var computedStyle = window.getComputedStyle(testDiv);
         var bgColor = computedStyle.backgroundColor;
+        var themeClass = null;
 
-        // Clean up
+        // Method 2: Try to detect Notion theme classes through computed styles
+        try {
+          // Check if we can detect theme-related CSS custom properties
+          var rootStyles = window.getComputedStyle(document.documentElement);
+          var notionBg = rootStyles.getPropertyValue('--notion-bg-color');
+          var notionText = rootStyles.getPropertyValue('--notion-text-color');
+
+          if (notionBg && notionBg !== '') {
+            console.log('🎨 Detected Notion CSS custom property:', notionBg);
+            document.body.removeChild(testDiv);
+            return notionBg;
+          }
+        } catch (e) {
+          // CSS custom properties not available
+        }
+
+        // Method 3: Try to detect theme through body class inheritance
+        var bodyClasses = '';
+        try {
+          // Create a more complex test to detect theme classes
+          var bodyTest = document.createElement('body');
+          var bodyComputed = window.getComputedStyle(document.body);
+          bodyClasses = bodyComputed.fontFamily || ''; // Indirect way to detect changes
+
+          // Check for theme indicators in computed styles
+          if (bodyComputed.backgroundColor && bodyComputed.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+            bgColor = bodyComputed.backgroundColor;
+          }
+        } catch (e) {
+          // Body access failed
+        }
+
         document.body.removeChild(testDiv);
 
-        // Check if we got a valid color (not transparent)
+        // Method 4: Enhanced color validation
         if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-          console.log('Visual background detection successful:', bgColor);
-          return bgColor;
+          // Additional validation for theme detection
+          var rgb = parseColorToRgb(bgColor);
+          if (rgb) {
+            var yiq = ((rgb.r * 299) + (rgb.g * 587) + (rgb.b * 114)) / 1000;
+            var isDark = yiq < 128;
+
+            console.log('🎨 Visual detection:', bgColor, '(Dark:', isDark + ')');
+            return bgColor;
+          }
         }
 
         return null;
       } catch (e) {
-        console.log('Visual detection failed:', e.message);
+        console.log('❌ Visual detection failed:', e.message);
         return null;
       }
     }
@@ -461,23 +509,51 @@
       }
     }
 
-    // CSS custom properties detection (fallback method)
+    // Enhanced CSS custom properties detection with Notion theme support
     function detectCSSCustomProperties() {
       try {
         // Try to read CSS custom properties that might be inherited
         var rootStyles = window.getComputedStyle(document.documentElement);
 
-        // Common CSS custom property names for backgrounds
+        // Comprehensive list of CSS custom properties for themes
         var bgProperties = [
+          // Standard theme properties
           '--bg-color', '--background-color', '--bg-primary',
           '--color-background', '--surface-background',
-          '--notion-bg-color', '--theme-bg-color'
+          '--theme-bg-color', '--theme-background',
+
+          // Notion-specific properties
+          '--notion-bg-color', '--notion-background-color',
+          '--notion-text-color', '--notion-theme-bg', '--notion-theme-text',
+          '--notion-auto-text-color',
+
+          // Common theme system properties
+          '--color-bg', '--color-surface', '--surface-bg',
+          '--primary-bg', '--secondary-bg',
+
+          // Dark/Light theme indicators
+          '--is-dark', '--theme-mode', '--color-scheme'
         ];
 
         for (var i = 0; i < bgProperties.length; i++) {
           var propValue = rootStyles.getPropertyValue(bgProperties[i]);
           if (propValue && propValue !== '') {
-            console.log('Found CSS custom property:', bgProperties[i], '=', propValue);
+            console.log('🎨 Found CSS custom property:', bgProperties[i], '=', propValue);
+
+            // Special handling for Notion theme properties
+            if (bgProperties[i].includes('notion') && bgProperties[i].includes('bg')) {
+              console.log('🎯 Notion background property detected:', propValue);
+              return propValue;
+            }
+
+            // Check for theme mode indicators
+            if (bgProperties[i].includes('theme-mode') || bgProperties[i].includes('is-dark')) {
+              if (propValue.includes('dark')) {
+                console.log('🌙 Dark theme detected via CSS property');
+                return 'rgb(25, 25, 25)'; // Notion dark background
+              }
+            }
+
             return propValue;
           }
         }
@@ -485,6 +561,60 @@
         return null;
       } catch (e) {
         console.log('CSS custom properties detection failed:', e.message);
+        return null;
+      }
+    }
+
+    // Specific function to detect Notion theme classes and indicators
+    function detectNotionThemeClasses() {
+      try {
+        console.log('🔍 Detecting Notion theme classes...');
+
+        // Check document body for theme-related classes
+        var bodyClasses = document.body.className || '';
+        console.log('Body classes:', bodyClasses);
+
+        // Check for Notion theme indicators in body classes
+        if (bodyClasses.includes('dark') || bodyClasses.includes('notion-dark')) {
+          console.log('🌙 Notion dark theme detected via body classes');
+          return 'rgb(25, 25, 25)';
+        }
+
+        if (bodyClasses.includes('light') || bodyClasses.includes('notion-light')) {
+          console.log('☀️ Notion light theme detected via body classes');
+          return 'rgb(255, 255, 255)';
+        }
+
+        // Check HTML element for theme classes
+        var htmlClasses = document.documentElement.className || '';
+        console.log('HTML classes:', htmlClasses);
+
+        if (htmlClasses.includes('dark') || htmlClasses.includes('notion-dark-theme')) {
+          console.log('🌙 Notion dark theme detected via HTML classes');
+          return 'rgb(25, 25, 25)';
+        }
+
+        if (htmlClasses.includes('light') || htmlClasses.includes('notion-light-theme')) {
+          console.log('☀️ Notion light theme detected via HTML classes');
+          return 'rgb(255, 255, 255)';
+        }
+
+        // Check for data attributes that might indicate theme
+        var bodyDataTheme = document.body.getAttribute('data-theme') ||
+                           document.documentElement.getAttribute('data-theme');
+
+        if (bodyDataTheme) {
+          console.log('Data theme attribute:', bodyDataTheme);
+          if (bodyDataTheme.includes('dark')) {
+            return 'rgb(25, 25, 25)';
+          } else if (bodyDataTheme.includes('light')) {
+            return 'rgb(255, 255, 255)';
+          }
+        }
+
+        return null;
+      } catch (e) {
+        console.log('Notion theme class detection failed:', e.message);
         return null;
       }
     }
@@ -598,13 +728,51 @@
       return null;
     }
 
-    // Listen for Notion theme changes via PostMessage API
+    // Enhanced PostMessage listener for theme changes
     window.addEventListener('message', function(event) {
-      // Verify origin for security (adjust as needed for Notion domains)
-      if (event.origin.includes('notion.so') || event.origin.includes('notion.site')) {
+      // Verify origin for security (allow Notion domains and parent origin)
+      var isAllowedOrigin = event.origin.includes('notion.so') ||
+                           event.origin.includes('notion.site') ||
+                           event.origin === window.location.origin;
+
+      if (isAllowedOrigin) {
+        // Handle theme change notifications
         if (event.data && event.data.type === 'themeChange') {
-          console.log('Notion theme change detected:', event.data);
+          console.log('🎨 Theme change detected:', event.data);
+          clearColorCache();
           setTimeout(applyAutoContrast, 100);
+        }
+
+        // Handle background color responses
+        if (event.data && event.data.type === 'BACKGROUND_COLOR_RESPONSE') {
+          console.log('🎨 Background color response received:', event.data.backgroundColor);
+          if (event.data.backgroundColor) {
+            clearColorCache();
+            // Update color immediately if we receive a response
+            var testElement = document.querySelector('.auto-contrast-text');
+            if (testElement) {
+              var optimalColor = calculateOptimalTextColor(event.data.backgroundColor);
+              testElement.style.setProperty('color', optimalColor, 'important');
+            }
+          }
+        }
+
+        // Handle Notion-specific theme indicators
+        if (event.data && event.data.type === 'NOTION_THEME_UPDATE') {
+          console.log('🎯 Notion theme update:', event.data.theme);
+          clearColorCache();
+
+          var notionBgColor = 'rgb(255, 255, 255)'; // default light
+          if (event.data.theme === 'dark' || event.data.theme === 'notion-dark') {
+            notionBgColor = 'rgb(25, 25, 25)';
+          }
+
+          // Force update for all Notion-enhanced elements
+          var notionElements = document.querySelectorAll('.notion-enhanced');
+          notionElements.forEach(function(element) {
+            var optimalColor = calculateOptimalTextColor(notionBgColor);
+            element.style.setProperty('color', optimalColor, 'important');
+          });
         }
       }
     });
@@ -670,22 +838,50 @@
           subtree: true
         });
 
-        // Method 2: Set up polling for visual background changes (fallback for cross-origin)
+        // Method 2: Intelligent polling for theme changes (ultra-responsive for Notion)
         var lastVisualBg = null;
+        var lastNotionCheck = 0;
         var pollInterval = setInterval(function() {
           try {
-            var currentVisualBg = detectVisualBackground();
-            if (currentVisualBg && currentVisualBg !== lastVisualBg) {
-              console.log('Visual background change detected:', currentVisualBg);
-              lastVisualBg = currentVisualBg;
-              clearColorCache();
-              applyAutoContrast();
+            var currentTime = Date.now();
+            var notionDetected = document.referrer && document.referrer.includes('notion');
+
+            // Ultra-frequent polling for Notion (every 800ms for first 10 seconds)
+            if (notionDetected && (currentTime - lastNotionCheck) > 800) {
+              lastNotionCheck = currentTime;
+
+              // Check visual background
+              var currentVisualBg = detectVisualBackground();
+              if (currentVisualBg && currentVisualBg !== lastVisualBg) {
+                console.log('🎨 Notion background change detected:', currentVisualBg);
+                lastVisualBg = currentVisualBg;
+                clearColorCache();
+                applyAutoContrast();
+              }
+
+              // Also check for theme class changes
+              var themeBg = detectNotionThemeClasses();
+              if (themeBg && themeBg !== lastVisualBg) {
+                console.log('🎯 Notion theme class change detected:', themeBg);
+                lastVisualBg = themeBg;
+                clearColorCache();
+                applyAutoContrast();
+              }
+            }
+            // Regular polling for non-Notion sites (every 3 seconds)
+            else if (!notionDetected && (currentTime % 3000) < 100) {
+              var currentVisualBg = detectVisualBackground();
+              if (currentVisualBg && currentVisualBg !== lastVisualBg) {
+                console.log('🎨 Background change detected:', currentVisualBg);
+                lastVisualBg = currentVisualBg;
+                clearColorCache();
+                applyAutoContrast();
+              }
             }
           } catch (e) {
-            // Visual detection might fail in some browsers, that's okay
             console.log('Polling error (non-critical):', e.message);
           }
-        }, 3000); // Poll every 3 seconds (less frequent to reduce noise)
+        }, 800); // Very frequent polling (800ms) for maximum responsiveness
 
         // Method 3: Listen for postMessage theme change notifications
         window.addEventListener('message', function(event) {
@@ -713,14 +909,47 @@
     window.getParentBackgroundColor = getParentBackgroundColor;
     window.calculateOptimalTextColor = calculateOptimalTextColor;
     window.clearColorCache = clearColorCache;
+    window.detectNotionThemeClasses = detectNotionThemeClasses;
+    window.detectVisualBackground = detectVisualBackground;
+
+    // Manual theme update function for testing
+    window.forceThemeUpdate = function(theme) {
+      console.log('🔧 Forcing theme update to:', theme);
+      clearColorCache();
+
+      var themeColors = {
+        'light': 'rgb(255, 255, 255)',
+        'dark': 'rgb(25, 25, 25)',
+        'notion-light': 'rgb(255, 255, 255)',
+        'notion-dark': 'rgb(25, 25, 25)',
+        'auto': null // Auto-detect
+      };
+
+      var bgColor = themeColors[theme] || (theme === 'auto' ? null : theme);
+
+      if (bgColor) {
+        var elements = document.querySelectorAll('.auto-contrast-text');
+        elements.forEach(function(element) {
+          var optimalColor = calculateOptimalTextColor(bgColor);
+          element.style.setProperty('color', optimalColor, 'important');
+          console.log('✅ Applied color:', optimalColor, 'for background:', bgColor);
+        });
+      } else {
+        // Auto-detect
+        applyAutoContrast();
+      }
+    };
 
     // Enhanced debugging function
     window.debugColorDetection = function() {
       console.log('=== Color Detection Debug Info ===');
       console.log('Parent background:', getParentBackgroundColor());
       console.log('Notion theme:', detectNotionTheme());
+      console.log('Notion theme classes:', detectNotionThemeClasses());
+      console.log('Visual background:', detectVisualBackground());
       console.log('Cache size:', colorCache.size);
-      console.log('Available functions:', Object.keys(window).filter(k => k.includes('Color')));
+      console.log('Referrer:', document.referrer);
+      console.log('Available functions:', Object.keys(window).filter(k => k.includes('Color') || k.includes('Theme')));
     };
   </script>
 </body>

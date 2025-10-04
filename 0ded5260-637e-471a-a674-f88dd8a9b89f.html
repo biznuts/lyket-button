@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    /* Global white color override for non-auto-contrast elements */
+    *:not(.auto-contrast-text) {
+      color: white !important;
+    }
+
+    html {
+      height: 100%;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', Helvetica, 'Apple Color Emoji', Arial, sans-serif, 'Segoe UI Emoji', 'Segoe UI Symbol';
+    }
+
+    body {
+      /* background-color: rgb(25, 25, 25); */
+      background-color: rgb(255, 255, 255);
+      margin: 0;
+      padding: 10px;
+    }
+
+    .feedback-widget {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      /* background-color: #30302E; */
+      padding: 0px 12px;
+      border-radius: 20px;
+      border: 0px;
+    }
+
+    /* Ensure auto-contrast text color overrides take precedence */
+    .auto-contrast-text,
+    .auto-contrast-text * {
+      color: inherit !important;
+      font-weight: 500;
+    }
+  </style>
+</head>
+
+<body class="page-body ">
+  <div class="feedback-widget auto-contrast-text">
+    <span>Just let me know if you think this is helpful.</span>
+    <span data-lyket-type="like" data-lyket-id="0ded5260-637e-471a-a674-f88dd8a9b89f" data-lyket-namespace="notion"
+      data-lyket-template="twitter"></span>
+  </div>
+  <script src="https://unpkg.com/@lyket/widget@latest/dist/lyket.js?apiKey=pt_c791403c654b27c63cd0926a8d1f37"></script>
+
+  <script>
+    // Function to calculate if a color is light or dark
+    function getContrastYIQ(r, g, b) {
+      // YIQ formula for luminance
+      var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+      return (yiq >= 128) ? 'light' : 'dark';
+    }
+
+    // Function to get RGB values from any CSS color format
+    function getRGB(color) {
+      // Create a temporary element to get computed style
+      var tempDiv = document.createElement('div');
+      tempDiv.style.color = color;
+      document.body.appendChild(tempDiv);
+      var computedColor = window.getComputedStyle(tempDiv).color;
+      document.body.removeChild(tempDiv);
+
+      // Parse RGB values
+      var rgbMatch = computedColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+      if (rgbMatch) {
+        return {
+          r: parseInt(rgbMatch[1]),
+          g: parseInt(rgbMatch[2]),
+          b: parseInt(rgbMatch[3])
+        };
+      }
+      return { r: 0, g: 0, b: 0 };
+    }
+
+    // Function to apply auto-contrast to elements
+    function applyAutoContrast() {
+      var elements = document.querySelectorAll('.auto-contrast-text');
+
+      elements.forEach(function (element) {
+        // Get the background color of the element itself
+        var elementBgColor = window.getComputedStyle(element).backgroundColor;
+
+        // If element has no background, check parent elements
+        var bgColor = elementBgColor;
+        if (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
+          // Check parent elements for background color
+          var parent = element.parentElement;
+          while (parent && (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent')) {
+            bgColor = window.getComputedStyle(parent).backgroundColor;
+            parent = parent.parentElement;
+          }
+        }
+
+        if (bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+          // Parse RGB values directly from computed style
+          var rgbMatch = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+          if (rgbMatch) {
+            var r = parseInt(rgbMatch[1]);
+            var g = parseInt(rgbMatch[2]);
+            var b = parseInt(rgbMatch[3]);
+            var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            var contrast = (yiq >= 128) ? 'light' : 'dark';
+            var finalColor = contrast === 'dark' ? 'white' : 'black';
+            var finalWidgetBgColor = contrast === 'dark' ? '#30302E' : '#F0EFED';
+
+            // Debug logging to help troubleshoot
+            console.log('Element:', element.className, 'Background:', bgColor, 'YIQ:', yiq, 'Contrast:', contrast, 'Final color:', finalColor);
+
+            // Apply color with higher specificity to override global styles
+            element.style.setProperty('color', finalColor, 'important');
+            element.style.setProperty('background-color', finalWidgetBgColor, 'important');
+          } else {
+            console.log('Could not parse background color:', bgColor, 'for element:', element.className);
+          }
+        } else {
+          console.log('No background color found for element:', element.className);
+        }
+      });
+    }
+
+    // Apply auto-contrast when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+      applyAutoContrast();
+    });
+
+    // Apply auto-contrast when Lyket widget loads (in case it changes colors)
+    document.addEventListener('DOMNodeInserted', function () {
+      setTimeout(applyAutoContrast, 100);
+    });
+
+    // Make function globally available for manual testing
+    window.testAutoContrast = applyAutoContrast;
+  </script>
+</body>
+
+</html>

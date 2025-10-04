@@ -171,10 +171,29 @@
       return null;
     }
 
-    // Enhanced visual background detection with Notion theme support
+    // Ultra-sensitive visual background detection with Notion theme support
     function detectVisualBackground() {
       try {
-        // Method 1: Create multiple test elements to detect different aspects
+        console.log('🔍 Starting ultra-sensitive visual detection...');
+
+        // Method 1: Check for Notion scrollbar style first (most reliable indicator)
+        var scrollbarStyle = document.getElementById('scroll-properties');
+        if (scrollbarStyle) {
+          var styleContent = scrollbarStyle.textContent || '';
+          console.log('📜 Found scrollbar style:', styleContent.substring(0, 100) + '...');
+
+          if (styleContent.includes('rgba(255, 255, 255, 0.2)')) {
+            console.log('🌙 Dark theme detected via scrollbar (white thumb)');
+            return 'rgb(25, 25, 25)';
+          }
+
+          if (styleContent.includes('#D3D1CB')) {
+            console.log('☀️ Light theme detected via scrollbar (gray thumb)');
+            return 'rgb(255, 255, 255)';
+          }
+        }
+
+        // Method 2: Create multiple test elements to detect different aspects
         var testDiv = document.createElement('div');
         testDiv.style.cssText = `
           position: fixed;
@@ -190,9 +209,8 @@
         // Get multiple computed properties
         var computedStyle = window.getComputedStyle(testDiv);
         var bgColor = computedStyle.backgroundColor;
-        var themeClass = null;
 
-        // Method 2: Try to detect Notion theme classes through computed styles
+        // Method 3: Try to detect Notion theme classes through computed styles
         try {
           // Check if we can detect theme-related CSS custom properties
           var rootStyles = window.getComputedStyle(document.documentElement);
@@ -208,37 +226,51 @@
           // CSS custom properties not available
         }
 
-        // Method 3: Try to detect theme through body class inheritance
-        var bodyClasses = '';
+        // Method 4: Try to detect theme through body class inheritance
         try {
-          // Create a more complex test to detect theme classes
-          var bodyTest = document.createElement('body');
           var bodyComputed = window.getComputedStyle(document.body);
-          bodyClasses = bodyComputed.fontFamily || ''; // Indirect way to detect changes
 
           // Check for theme indicators in computed styles
           if (bodyComputed.backgroundColor && bodyComputed.backgroundColor !== 'rgba(0, 0, 0, 0)') {
             bgColor = bodyComputed.backgroundColor;
           }
+
+          // Look for any Notion-related computed styles
+          var bodyClasses = document.body.className || '';
+          if (bodyClasses.includes('notion') || bodyClasses.includes('dark')) {
+            console.log('🎯 Notion theme detected in body classes:', bodyClasses);
+          }
         } catch (e) {
-          // Body access failed
+          console.log('Body style access failed:', e.message);
         }
 
         document.body.removeChild(testDiv);
 
-        // Method 4: Enhanced color validation
+        // Method 5: Enhanced color validation with theme intelligence
         if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-          // Additional validation for theme detection
           var rgb = parseColorToRgb(bgColor);
           if (rgb) {
             var yiq = ((rgb.r * 299) + (rgb.g * 587) + (rgb.b * 114)) / 1000;
             var isDark = yiq < 128;
 
             console.log('🎨 Visual detection:', bgColor, '(Dark:', isDark + ')');
+
+            // Additional theme intelligence
+            if (isDark && rgb.r < 50 && rgb.g < 50 && rgb.b < 50) {
+              console.log('🌙 Very dark background detected - likely Notion dark theme');
+              return 'rgb(25, 25, 25)';
+            }
+
+            if (!isDark && rgb.r > 200 && rgb.g > 200 && rgb.b > 200) {
+              console.log('☀️ Very light background detected - likely Notion light theme');
+              return 'rgb(255, 255, 255)';
+            }
+
             return bgColor;
           }
         }
 
+        console.log('❌ No reliable visual background detected');
         return null;
       } catch (e) {
         console.log('❌ Visual detection failed:', e.message);
@@ -565,16 +597,59 @@
       }
     }
 
-    // Specific function to detect Notion theme classes and indicators
+    // Enhanced Notion theme detection including injected styles
     function detectNotionThemeClasses() {
       try {
-        console.log('🔍 Detecting Notion theme classes...');
+        console.log('🔍 Detecting Notion theme classes and injected styles...');
 
-        // Check document body for theme-related classes
+        // Method 1: Check for Notion-injected style elements
+        var notionScrollbarStyle = document.getElementById('scroll-properties');
+        if (notionScrollbarStyle) {
+          console.log('🎨 Found Notion scrollbar style element');
+
+          // Analyze the scrollbar color to determine theme
+          var scrollbarText = notionScrollbarStyle.textContent || '';
+          console.log('Scrollbar style content:', scrollbarText);
+
+          if (scrollbarText.includes('rgba(255, 255, 255, 0.2)')) {
+            console.log('🌙 Dark theme detected via scrollbar color (white thumb)');
+            return 'rgb(25, 25, 25)';
+          }
+
+          if (scrollbarText.includes('#D3D1CB')) {
+            console.log('☀️ Light theme detected via scrollbar color (gray thumb)');
+            return 'rgb(255, 255, 255)';
+          }
+        }
+
+        // Method 2: Look for other Notion-injected elements
+        var notionElements = document.querySelectorAll('[data-notion], [class*="notion"]');
+        if (notionElements.length > 0) {
+          console.log('🎯 Found Notion-injected elements:', notionElements.length);
+
+          // Check if any of these elements have theme-indicating styles
+          for (var i = 0; i < notionElements.length; i++) {
+            var element = notionElements[i];
+            var computedStyle = window.getComputedStyle(element);
+
+            // Check for theme-specific colors in these elements
+            if (computedStyle.backgroundColor && computedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+              var rgb = parseColorToRgb(computedStyle.backgroundColor);
+              if (rgb) {
+                var yiq = ((rgb.r * 299) + (rgb.g * 587) + (rgb.b * 114)) / 1000;
+                if (yiq < 50) { // Very dark background
+                  console.log('🌙 Dark theme inferred from Notion element background');
+                  return 'rgb(25, 25, 25)';
+                }
+              }
+            }
+          }
+        }
+
+        // Method 3: Check document body for theme-related classes (fallback)
         var bodyClasses = document.body.className || '';
         console.log('Body classes:', bodyClasses);
 
-        // Check for Notion theme indicators in body classes
         if (bodyClasses.includes('dark') || bodyClasses.includes('notion-dark')) {
           console.log('🌙 Notion dark theme detected via body classes');
           return 'rgb(25, 25, 25)';
@@ -585,7 +660,7 @@
           return 'rgb(255, 255, 255)';
         }
 
-        // Check HTML element for theme classes
+        // Method 4: Check HTML element for theme classes
         var htmlClasses = document.documentElement.className || '';
         console.log('HTML classes:', htmlClasses);
 
@@ -599,7 +674,7 @@
           return 'rgb(255, 255, 255)';
         }
 
-        // Check for data attributes that might indicate theme
+        // Method 5: Check for data attributes that might indicate theme
         var bodyDataTheme = document.body.getAttribute('data-theme') ||
                            document.documentElement.getAttribute('data-theme');
 
@@ -805,7 +880,48 @@
     // Enhanced observer setup - works around cross-origin restrictions
     function setupEnhancedObserver() {
       try {
-        // Method 1: Monitor our own document for style changes that might indicate parent changes
+        // Method 1: Monitor HEAD for Notion-injected style elements
+        var headObserver = new MutationObserver(function(mutations) {
+          var notionStyleDetected = false;
+
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList') {
+              // Check for newly added style elements
+              Array.from(mutation.addedNodes).forEach(function(node) {
+                if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'STYLE') {
+                  if (node.id === 'scroll-properties' || node.textContent.includes('scrollbar-color')) {
+                    console.log('🎨 Notion scrollbar style injected!');
+                    notionStyleDetected = true;
+                  }
+                }
+              });
+            }
+          });
+
+          if (notionStyleDetected) {
+            console.log('🎯 Notion theme change detected via injected styles');
+            clearColorCache();
+            setTimeout(applyAutoContrast, 100);
+
+            // Also check the scrollbar style content for theme detection
+            var scrollbarStyle = document.getElementById('scroll-properties');
+            if (scrollbarStyle) {
+              var styleContent = scrollbarStyle.textContent || '';
+              if (styleContent.includes('rgba(255, 255, 255, 0.2)')) {
+                console.log('🌙 Immediate dark theme detection from scrollbar');
+              } else if (styleContent.includes('#D3D1CB')) {
+                console.log('☀️ Immediate light theme detection from scrollbar');
+              }
+            }
+          }
+        });
+
+        headObserver.observe(document.head, {
+          childList: true,
+          subtree: true
+        });
+
+        // Method 2: Monitor our own document for style changes that might indicate parent changes
         var localObserver = new MutationObserver(function(mutations) {
           var shouldUpdate = false;
 
@@ -838,37 +954,57 @@
           subtree: true
         });
 
-        // Method 2: Intelligent polling for theme changes (ultra-responsive for Notion)
+        // Method 2: Ultra-responsive polling for Notion theme changes
         var lastVisualBg = null;
-        var lastNotionCheck = 0;
+        var lastScrollbarContent = null;
+        var pollCount = 0;
+
         var pollInterval = setInterval(function() {
           try {
+            pollCount++;
             var currentTime = Date.now();
             var notionDetected = document.referrer && document.referrer.includes('notion');
 
-            // Ultra-frequent polling for Notion (every 800ms for first 10 seconds)
-            if (notionDetected && (currentTime - lastNotionCheck) > 800) {
-              lastNotionCheck = currentTime;
+            // Ultra-frequent polling for Notion (every 500ms for first 30 seconds)
+            if (notionDetected && pollCount < 60) {
+              // Check for scrollbar style changes first (most reliable)
+              var scrollbarStyle = document.getElementById('scroll-properties');
+              if (scrollbarStyle) {
+                var currentScrollbarContent = scrollbarStyle.textContent || '';
 
-              // Check visual background
+                if (currentScrollbarContent !== lastScrollbarContent) {
+                  console.log('🎯 Scrollbar style changed! New content:', currentScrollbarContent.substring(0, 50) + '...');
+                  lastScrollbarContent = currentScrollbarContent;
+
+                  var detectedBg = null;
+                  if (currentScrollbarContent.includes('rgba(255, 255, 255, 0.2)')) {
+                    console.log('🌙 Dark theme detected via scrollbar change');
+                    detectedBg = 'rgb(25, 25, 25)';
+                  } else if (currentScrollbarContent.includes('#D3D1CB')) {
+                    console.log('☀️ Light theme detected via scrollbar change');
+                    detectedBg = 'rgb(255, 255, 255)';
+                  }
+
+                  if (detectedBg && detectedBg !== lastVisualBg) {
+                    console.log('🚀 Immediate theme update:', detectedBg);
+                    lastVisualBg = detectedBg;
+                    clearColorCache();
+                    applyAutoContrast();
+                    return; // Exit early for immediate response
+                  }
+                }
+              }
+
+              // Also check visual background
               var currentVisualBg = detectVisualBackground();
               if (currentVisualBg && currentVisualBg !== lastVisualBg) {
-                console.log('🎨 Notion background change detected:', currentVisualBg);
+                console.log('🎨 Visual background change detected:', currentVisualBg);
                 lastVisualBg = currentVisualBg;
                 clearColorCache();
                 applyAutoContrast();
               }
-
-              // Also check for theme class changes
-              var themeBg = detectNotionThemeClasses();
-              if (themeBg && themeBg !== lastVisualBg) {
-                console.log('🎯 Notion theme class change detected:', themeBg);
-                lastVisualBg = themeBg;
-                clearColorCache();
-                applyAutoContrast();
-              }
             }
-            // Regular polling for non-Notion sites (every 3 seconds)
+            // Regular polling for non-Notion sites
             else if (!notionDetected && (currentTime % 3000) < 100) {
               var currentVisualBg = detectVisualBackground();
               if (currentVisualBg && currentVisualBg !== lastVisualBg) {
@@ -881,7 +1017,7 @@
           } catch (e) {
             console.log('Polling error (non-critical):', e.message);
           }
-        }, 800); // Very frequent polling (800ms) for maximum responsiveness
+        }, 500); // Ultra-frequent 500ms polling for maximum responsiveness
 
         // Method 3: Listen for postMessage theme change notifications
         window.addEventListener('message', function(event) {

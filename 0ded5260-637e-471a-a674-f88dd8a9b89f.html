@@ -448,8 +448,8 @@
           'gov.uk': 'rgb(255, 255, 255)',
           'whitehouse.gov': 'rgb(255, 255, 255)',
 
-          // Dark theme sites
-          'biznuts.github.io': 'rgb(25, 25, 25)', // Your specific case
+          // Light theme sites
+          'biznuts.github.io': 'rgb(255, 255, 255)', // Your specific case - light theme default
           'github.io': 'rgb(25, 25, 25)', // GitHub Pages dark themes
         };
 
@@ -482,8 +482,8 @@
 
         // Special case for biznuts.github.io - prioritize this match
         if (hostname === 'biznuts.github.io') {
-          console.log('🎯 Detected biznuts.github.io, using dark theme background');
-          return 'rgb(25, 25, 25)';
+          console.log('🎯 Detected biznuts.github.io, using light theme background');
+          return 'rgb(255, 255, 255)';
         }
 
         // Check for partial matches (e.g., subdomains)
@@ -1058,6 +1058,8 @@
         'dark': 'rgb(25, 25, 25)',
         'notion-light': 'rgb(255, 255, 255)',
         'notion-dark': 'rgb(25, 25, 25)',
+        'biznuts-light': 'rgb(255, 255, 255)', // Default for biznuts.github.io
+        'biznuts-dark': 'rgb(25, 25, 25)',
         'auto': null // Auto-detect
       };
 

@@ -17,17 +17,13 @@
       /* background-color: rgb(25, 25, 25); */
       background-color: rgb(255, 255, 255);
       margin: 0;
-      padding: 0;
+      padding: 0px;
     }
 
     .feedback-widget {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      /* background-color: #30302E; */
-      padding: 0px 12px;
-      border-radius: 20px;
-      border: 0px;
+      padding: 0px 12px 0px 0px;
     }
 
     /* Ensure auto-contrast text color overrides take precedence */
@@ -36,11 +32,23 @@
       color: inherit !important;
       font-weight: 500;
     }
+
+    /* Notion theme support - try to inherit theme colors if available */
+    .notion-theme-aware {
+      background-color: var(--notion-bg-color, var(--notion-theme-bg, inherit));
+      color: var(--notion-text-color, var(--notion-theme-text, inherit));
+    }
+
+    /* Enhanced auto-contrast with Notion theme fallbacks */
+    .auto-contrast-text.notion-enhanced {
+      /* Use Notion theme colors if available, fallback to auto-calculation */
+      color: var(--notion-auto-text-color, inherit);
+    }
   </style>
 </head>
 
 <body class="page-body ">
-  <div class="feedback-widget auto-contrast-text">
+  <div class="feedback-widget auto-contrast-text notion-enhanced">
     <span>Just let me know if you think this is helpful.</span>
     <span data-lyket-type="like" data-lyket-id="0ded5260-637e-471a-a674-f88dd8a9b89f" data-lyket-namespace="notion"
       data-lyket-template="twitter"></span>
@@ -76,55 +84,145 @@
       return { r: 0, g: 0, b: 0 };
     }
 
-    // Function to apply auto-contrast to elements
-    function applyAutoContrast() {
-      var elements = document.querySelectorAll('.auto-contrast-text');
+    // Enhanced function to detect Notion theme colors
+    function detectNotionTheme() {
+      var theme = {
+        background: null,
+        text: null,
+        isDark: false
+      };
 
-      elements.forEach(function (element) {
-        // Get the background color of the element itself
-        var elementBgColor = window.getComputedStyle(element).backgroundColor;
+      try {
+        // Try to access parent document styles (may be restricted in iframe)
+        if (window.parent && window.parent.document) {
+          var parentBody = window.parent.document.body;
+          var parentStyles = window.getComputedStyle(parentBody);
 
-        // If element has no background, check parent elements
-        var bgColor = elementBgColor;
-        if (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
-          // Check parent elements for background color
-          var parent = element.parentElement;
-          while (parent && (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent')) {
-            bgColor = window.getComputedStyle(parent).backgroundColor;
-            parent = parent.parentElement;
+          if (parentStyles) {
+            theme.background = parentStyles.backgroundColor;
+            theme.text = parentStyles.color;
+
+            // Determine if dark theme based on background
+            if (theme.background !== 'rgba(0, 0, 0, 0)' && theme.background !== 'transparent') {
+              var rgbMatch = theme.background.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+              if (rgbMatch) {
+                var yiq = ((parseInt(rgbMatch[1]) * 299) + (parseInt(rgbMatch[2]) * 587) + (parseInt(rgbMatch[3]) * 114)) / 1000;
+                theme.isDark = yiq < 128;
+              }
+            }
           }
         }
+      } catch (e) {
+        console.log('Could not access parent document (iframe restriction):', e.message);
+      }
 
-        if (bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-          // Parse RGB values directly from computed style
-          var rgbMatch = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      return theme;
+    }
+
+    // Enhanced function to apply auto-contrast with Notion theme support
+    function applyAutoContrast() {
+      var elements = document.querySelectorAll('.auto-contrast-text');
+      var notionTheme = detectNotionTheme();
+
+      elements.forEach(function (element) {
+        var finalColor = null;
+
+        // First, try to use Notion theme if available and element is theme-aware
+        if (element.classList.contains('notion-enhanced') && notionTheme.background) {
+          var rgbMatch = notionTheme.background.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
           if (rgbMatch) {
             var r = parseInt(rgbMatch[1]);
             var g = parseInt(rgbMatch[2]);
             var b = parseInt(rgbMatch[3]);
             var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
             var contrast = (yiq >= 128) ? 'light' : 'dark';
-            var finalColor = contrast === 'dark' ? 'white' : 'black';
-            var finalWidgetBgColor = contrast === 'dark' ? '#30302E' : '#F0EFED';
+            finalColor = contrast === 'dark' ? 'white' : 'black';
 
-            // Debug logging to help troubleshoot
-            console.log('Element:', element.className, 'Background:', bgColor, 'YIQ:', yiq, 'Contrast:', contrast, 'Final color:', finalColor);
-
-            // Apply color with higher specificity to override global styles
-            element.style.setProperty('color', finalColor, 'important');
-            element.style.setProperty('background-color', finalWidgetBgColor, 'important');
-          } else {
-            console.log('Could not parse background color:', bgColor, 'for element:', element.className);
+            console.log('Using Notion theme - Background:', notionTheme.background, 'Text color:', finalColor);
           }
-        } else {
-          console.log('No background color found for element:', element.className);
+        }
+
+        // Fallback to original logic if no theme color determined
+        if (!finalColor) {
+          // Get the background color of the element itself
+          var elementBgColor = window.getComputedStyle(element).backgroundColor;
+
+          // If element has no background, check parent elements
+          var bgColor = elementBgColor;
+          if (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
+            // Check parent elements for background color
+            var parent = element.parentElement;
+            while (parent && (bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent')) {
+              bgColor = window.getComputedStyle(parent).backgroundColor;
+              parent = parent.parentElement;
+            }
+          }
+
+          if (bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+            // Parse RGB values directly from computed style
+            var rgbMatch = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            if (rgbMatch) {
+              var r = parseInt(rgbMatch[1]);
+              var g = parseInt(rgbMatch[2]);
+              var b = parseInt(rgbMatch[3]);
+              var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+              var contrast = (yiq >= 128) ? 'light' : 'dark';
+              finalColor = contrast === 'dark' ? 'white' : 'black';
+
+              console.log('Using local background - Background:', bgColor, 'Text color:', finalColor);
+            } else {
+              console.log('Could not parse background color:', bgColor, 'for element:', element.className);
+            }
+          } else {
+            console.log('No background color found for element:', element.className);
+          }
+        }
+
+        // Apply the determined color
+        if (finalColor) {
+          element.style.setProperty('color', finalColor, 'important');
         }
       });
+    }
+
+    // Listen for Notion theme changes via PostMessage API
+    window.addEventListener('message', function(event) {
+      // Verify origin for security (adjust as needed for Notion domains)
+      if (event.origin.includes('notion.so') || event.origin.includes('notion.site')) {
+        if (event.data && event.data.type === 'themeChange') {
+          console.log('Notion theme change detected:', event.data);
+          setTimeout(applyAutoContrast, 100);
+        }
+      }
+    });
+
+    // Watch for changes in parent container styles (when possible)
+    function watchForThemeChanges() {
+      try {
+        if (window.parent && window.parent.document) {
+          var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                console.log('Parent style change detected');
+                applyAutoContrast();
+              }
+            });
+          });
+
+          observer.observe(window.parent.document.body, {
+            attributes: true,
+            attributeFilter: ['style']
+          });
+        }
+      } catch (e) {
+        console.log('Could not set up parent observer (iframe restriction)');
+      }
     }
 
     // Apply auto-contrast when page loads
     document.addEventListener('DOMContentLoaded', function () {
       applyAutoContrast();
+      watchForThemeChanges();
     });
 
     // Apply auto-contrast when Lyket widget loads (in case it changes colors)
@@ -132,8 +230,9 @@
       setTimeout(applyAutoContrast, 100);
     });
 
-    // Make function globally available for manual testing
+    // Make functions globally available for manual testing
     window.testAutoContrast = applyAutoContrast;
+    window.detectNotionTheme = detectNotionTheme;
   </script>
 </body>
 
